@@ -1,0 +1,10 @@
+version: '2'
+
+services: 
+  nginx:
+    image: nginx:latest
+    ports:
+      - 3000:80
+    volumes:
+      - ./build:/usr/share/nginx/html
+    command: /bin/bash -c "nginx -g 'daemon off;'"
