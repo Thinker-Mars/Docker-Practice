@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+      "target": "ES6",
+      "module": "esnext",
+      "jsx": "react",
+      "outDir": "tsbuild",
+      "lib": ["ES2015", "ES2016", "ES2017", "ES2020", "dom"],
+      "removeComments": false,
+      "noLib": false,
+      "preserveConstEnums": true,
+      "experimentalDecorators": true,
+      "moduleResolution": "node",
+      "allowSyntheticDefaultImports": true,
+      "baseUrl": ".",
+      "noEmit": true,
+      "strict": true
+  },
+  "typeRoots": ["./node_modules/@types/"],
+  "compileOnSave": false,
+  "exclude": ["node_modules", "dist"]
+}
