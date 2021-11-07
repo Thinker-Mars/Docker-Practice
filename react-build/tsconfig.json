@@ -15,7 +15,7 @@
       "noEmit": true,
       "strict": true
   },
-  "typeRoots": ["./node_modules/@types/"],
+  "typeRoots": ["./node_modules/@types/", "./types/index.d.ts"],
   "compileOnSave": false,
   "exclude": ["node_modules", "dist"]
 }

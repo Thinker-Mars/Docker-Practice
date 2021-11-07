@@ -4,6 +4,7 @@ const HappyPack = require('happypack');
 const ProgressBarPlugin = require('progress-bar-webpack-plugin');
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 const CaseSensitivePathPlugin = require('case-sensitive-paths-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const cpuNum = require('os').cpus().length;
 
 module.exports = ({ name, path: modulePath }) => {
@@ -16,6 +17,10 @@ module.exports = ({ name, path: modulePath }) => {
     },
     resolve: {
       extensions: ['.ts', '.tsx', '.jsx', '.js']
+    },
+    externals: {
+      react: 'window.vendor.react',
+      'react-dom': 'window.vendor.reactDom'
     },
     module: {
       rules: [
@@ -66,7 +71,10 @@ module.exports = ({ name, path: modulePath }) => {
         additionalFormatters: [],
         additionalTransformers: []
       }),
-      new CaseSensitivePathPlugin()
+      new CaseSensitivePathPlugin(),
+      new BundleAnalyzerPlugin({
+        openAnalyzer: false
+      })
     ]
   }
 }
