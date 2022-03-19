@@ -2,13 +2,26 @@ const webpack = require('webpack');
 const fs = require('fs');
 const path = require('path');
 const cwd = process.cwd();
+const ejs = require("ejs");
+const devServer = require('./dev-server');
 const devWebpackConfig = require('./webpack/webpack.dev');
+const prodWebpackConfig = require('./webpack/webpack.prod');
+/**
+ * 开发模式构建产物目录
+ */
 const destPath = path.resolve(cwd, 'dest');
-
+/**
+ * ejs模板目录
+ */
+const ejsTemplate = path.resolve(cwd, 'template/index.ejs');
 /**
  * 配置文件的路径
  */
-const buildConfigPath = path.resolve(cwd, 'buildConfig.js');
+const buildConfigPath = path.resolve(cwd, 'customBuild.js');
+/**
+ * 无需生成html的模块
+ */
+const noNeedHtmlModule = ['common'];
 
 /**
  * 获取配置文件
@@ -53,18 +66,62 @@ function generateEntry(config) {
 }
 
 /**
- * 根据编译入口，生成 webpack 的配置
- * @param {array} buildEntries 编译入口 
+ * 生成dev模式下打包配置
+ * @param {Object} buildConfig 
+ */
+function getDevWebpackConfig(buildConfig) {
+  return devWebpackConfig(buildConfig);
+}
+
+/**
+ * 生成prod模式下打包配置
+ * @param {string[]} buildEntries 
  * @returns 
  */
-function getWebpackConfigs(buildEntries) {
+function getProdWebpackConfigs(buildEntries) {
   return buildEntries.map((buildEntry) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('本次编译的模块有: %s', buildEntry.name);
-      return devWebpackConfig(buildEntry);
+    return prodWebpackConfig(buildEntry);
+  });
+}
+
+/**
+ * copy css文件至打包目录
+ * @param {string} entry 
+ */
+function copyCss(entry) {
+  const originCssPath = path.resolve(cwd, `app/${entry}/assets/css/${entry}.css`);
+  const copyCssFolder = path.resolve(cwd, `../dest/assets/${entry}/css`);
+  const copyCssPath = path.resolve(cwd, `../dest/assets/${entry}/css/${entry}.css`);
+  if (fs.existsSync(originCssPath)) {
+    if (!fs.existsSync(copyCssFolder)) {
+      fs.mkdirSync(copyCssFolder);
     }
-    console.error('❌ 暂不支持该编译模式: %s', process.env.NODE_ENV);
-  })
+    fs.writeFileSync(copyCssPath, fs.readFileSync(originCssPath));
+  }
+}
+
+/**
+ * ejs to html
+ * @param {string} entry 本次构建的模块
+ */
+function generateBusinessHtml(entry) {
+  const htmlPath = path.resolve(cwd, `../dest/html/${entry}.html`);
+  ejs.renderFile(
+    ejsTemplate,
+    {
+      busuness: entry,
+      businessJS: `../assets/${entry}/${entry}.prod.js`,
+      businessCss: `../assets/${entry}/css/${entry}.css`
+    },
+    function(err, str) {
+      if (err) {
+        console.error('❌ 模板生成失败: %s', err);
+      }
+      if (str) {
+        fs.writeFileSync(htmlPath, str);
+      }
+    }
+  );
 }
 
 /**
@@ -87,7 +144,7 @@ function deleteFolder(path) {
   }
 }
 
-function runProdCompiler(compiler) {
+function runProdCompiler(entryName, compiler) {
   return new Promise((resolve, reject) => {
     compiler.run((err, stats) => {
       if (err) {
@@ -103,8 +160,11 @@ function runProdCompiler(compiler) {
         );
         throw new Error(stats.errors);
       }
+      if (!noNeedHtmlModule.includes(entryName)) {
+        copyCss(entryName);
+        generateBusinessHtml(entryName);
+      }
       resolve();
-      // fs.writeFileSync(`${buildPath}/stats`, stats.toString(), 'utf-8');
     });
   });
 }
@@ -128,14 +188,8 @@ function runDevCompiler(compiler) {
         );
         throw new Error(stats.errors);
       }
-      // fs.writeFileSync(`${destPath}/stats`, stats.toString(), 'utf-8');
     }
   );
-}
-
-function buildDevelopment(webpackConfigs) {
-  const compiler = webpack(webpackConfigs);
-  runDevCompiler(compiler);
 }
 
 async function buildProduction(webpackConfigs) {
@@ -144,22 +198,37 @@ async function buildProduction(webpackConfigs) {
   }
   fs.mkdirSync(destPath);
   for (const config of webpackConfigs) {
+    const entryName = Object.keys(config.entry)[0];
     const compiler = webpack(config);
-    await runProdCompiler(compiler);
+    await runProdCompiler(entryName, compiler);
   }
-  console.log('done');
 }
 
 function build() {
+  if (process.env.NODE_ENV === 'development') {
+    runDevBuild();
+  } else if (process.env.NODE_ENV === 'production') {
+    runProdBuild();
+  }
+}
+
+async function runDevBuild() {
+  const buildConfig = getBuildConfig();
+  if (buildConfig.modules.length === 0) {
+    console.error('❌ 请指定想要编译的模块');
+    return;
+  }
+  console.log('本次编译的模块有: %s', buildConfig.modules.join(','));
+  const webpackConfig = getDevWebpackConfig(buildConfig);
+  const compiler = webpack(webpackConfig);
+  await devServer(buildConfig, compiler);
+}
+
+function runProdBuild() {
   const buildConfig = getBuildConfig();
   const buildEntries = generateEntry(buildConfig);
-  const webpackConfigs = getWebpackConfigs(buildEntries);
-  if (process.env.NODE_ENV === 'development') {
-    buildDevelopment(webpackConfigs);
-  } else if (process.env.NODE_ENV === 'production') {
-    buildProduction(webpackConfigs);
-  }
-
+  const webpackConfigs = getProdWebpackConfigs(buildEntries);
+  buildProduction(webpackConfigs);
 }
 
 build();

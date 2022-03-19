@@ -5,12 +5,13 @@ const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = () => {
   return {
-    mode: 'development',
+    mode: 'production',
+    devtool: false,
     entry: './vendor/index.ts',
     target: ['web', 'es5'],
     output: {
-      filename: 'vendor.dev.js',
-      path: path.resolve(cwd, '/dest/vendor'),
+      filename: 'vendor.prod.js',
+      path: path.resolve(cwd, '../dest/assets/vendor'),
     },
     resolve: {
       extensions: ['.ts', '.tsx', '.jsx', '.js']
@@ -64,4 +65,4 @@ module.exports = () => {
       ]
     }
   }
-};
+}

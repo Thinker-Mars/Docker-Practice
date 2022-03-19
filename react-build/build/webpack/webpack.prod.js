@@ -1,35 +1,28 @@
 const path = require('path');
 const cwd = process.cwd();
-const webpack = require('webpack');
 const HappyPack = require('happypack');
+const webpack = require('webpack');
 const ProgressBarPlugin = require('progress-bar-webpack-plugin');
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin');
 const CaseSensitivePathPlugin = require('case-sensitive-paths-webpack-plugin');
+const TerserPlugin = require("terser-webpack-plugin");
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const cpuNum = require('os').cpus().length;
 
-module.exports = ({ modules = ['common'], hot = true, analyze = false }) => {
+module.exports = ({ name, path: modulePath }) => {
   return {
-    mode: 'development',
-    devtool: 'eval-source-map',
+    mode: 'production',
     target: ['web', 'es5'],
-    entry: {
-      ...modules.reduce((acc, buildApp) => {
-        const buildAppPath = path.resolve(cwd, `app/${buildApp}`);
-        return {
-          ...acc,
-          [buildApp]: hot ? ['webpack-hot-middleware/client?reload=true', buildAppPath] : buildAppPath
-        }
-      }, {})
-    },
+    devtool: false,
+    entry: { [name]: modulePath },
     output: {
-      path: path.resolve(cwd, 'dest'),
-      filename: '[name].js'
+      path: path.resolve(cwd, `../dest/assets/${name}`),
+      filename: '[name].prod.js'
     },
     resolve: {
       extensions: ['.ts', '.tsx', '.jsx', '.js'],
       alias: {
-        'common': path.resolve(cwd, 'app/common')
+        'common': path.resolve(cwd, 'app/common'),
       }
     },
     externals: {
@@ -40,9 +33,9 @@ module.exports = ({ modules = ['common'], hot = true, analyze = false }) => {
       'redux-thunk': 'window.vendor.reduxThunk',
       'redux-actions': 'window.vendor.reduxActions',
       'react-router-dom': 'window.vendor.reactRouterDom',
-      'common/utils': 'window.vendorUtils',
-      'common/helpers': 'window.vendorHelpers',
-      'common/hooks': 'window.vendorHooks',
+      'app/common/utils': 'window.vendorUtils',
+      'app/common/helpers': 'window.vendorHelpers',
+      'app/common/hooks': 'window.vendorHooks',
       'common/constants': 'window.vendorConstants'
     },
     module: {
@@ -69,14 +62,10 @@ module.exports = ({ modules = ['common'], hot = true, analyze = false }) => {
               loader: 'babel-loader',
               options: {
                 retainLines: true,
-                cacheDirectory: true
+                cacheDirectory: false
               }
             }
           ]
-        },
-        {
-          test: /\.css$/,
-          use:['style-loader','css-loader']
         },
         {
           test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
@@ -108,10 +97,7 @@ module.exports = ({ modules = ['common'], hot = true, analyze = false }) => {
         loaders: [
           {
             loader: 'ts-loader',
-            options: {
-              happyPackMode: true,
-              transpileOnly: true
-            }
+            options: { happyPackMode: true, transpileOnly: true }
           }
         ]
       }),
@@ -128,12 +114,22 @@ module.exports = ({ modules = ['common'], hot = true, analyze = false }) => {
         additionalFormatters: [],
         additionalTransformers: []
       }),
-      new CaseSensitivePathPlugin(),
-      hot && new webpack.HotModuleReplacementPlugin(),
-      // 分析构建产物时开启
-      analyze && new BundleAnalyzerPlugin({
-        openAnalyzer: false
-      })
-    ].filter(Boolean)
+      new CaseSensitivePathPlugin()
+      // new BundleAnalyzerPlugin({
+      //   openAnalyzer: false
+      // })
+    ],
+    optimization: {
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            format: {
+              comments: false
+            }
+          }, // 构建时删除注释
+          extractComments: false
+        })
+      ]
+    }
   }
 }

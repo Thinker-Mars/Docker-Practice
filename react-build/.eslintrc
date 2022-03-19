@@ -12,12 +12,18 @@
   ],
   "extends": [
       "plugin:react/recommended",
+    //   "plugin:prettier/recommended",
       "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint",
-      "plugin:prettier/recommended"
+      "prettier"
   ],
   "env": {
       "browser": true,
       "node": true
+  },
+  "rules": {
+      "quotes": ["error", "single"],
+      "@typescript-eslint/no-explicit-any": false,
+      "comma-dangle": ["error", "never"],
+      "eqeqeq": ["error", "always", { "null": "ignore" }]
   }
 }
